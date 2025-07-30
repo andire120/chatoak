@@ -1,3 +1,4 @@
+// src/services/api.ts
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000'; // 백엔드 FastAPI 서버 주소
@@ -23,10 +24,12 @@ api.interceptors.request.use(
 );
 
 export const authApi = {
-  register: (username: string, password_hash: string) =>
-    api.post('/register', { username, password_hash }),
-  login: (username: string, password_hash: string) =>
-    api.post('/login', { username, password_hash }),
+  // 여기서 password_hash를 password로 변경합니다.
+  register: (username: string, password: string) => // <-- 여기 변경
+    api.post('/register', { username, password }),   // <-- 그리고 여기 변경 (객체 리터럴 내부도)
+  // 여기서 password_hash를 password로 변경합니다.
+  login: (username: string, password: string) =>     // <-- 여기 변경
+    api.post('/login', { username, password }),      // <-- 그리고 여기 변경 (객체 리터럴 내부도)
 };
 
 export const roomsApi = {
