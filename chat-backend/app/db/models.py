@@ -32,3 +32,4 @@ class ChatMessage(Base):
 
     room = relationship("ChatRoom", back_populates="messages")
     sender = relationship("User", back_populates="messages")
+

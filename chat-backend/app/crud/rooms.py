@@ -26,3 +26,4 @@ async def create_chat_room(db: AsyncSession, room: RoomCreate, creator_id: int):
 async def get_all_rooms(db: AsyncSession):
     result = await db.execute(select(ChatRoom))
     return result.scalars().all()
+
