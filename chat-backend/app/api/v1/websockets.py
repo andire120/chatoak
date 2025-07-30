@@ -1,8 +1,10 @@
+# app/api/v1/websocket.py
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.crud import users as crud_users
-from app.crud import rooms as crud_rooms
+from app.crud import rooms as crud_rooms # rooms CRUD 모듈 임포트 확인
 from app.services.redis_manager import redis_manager
 from app.services.message_queue import message_queue
 from app.core.security import decode_access_token
@@ -12,18 +14,16 @@ import asyncio
 
 router = APIRouter()
 
-# 활성 WebSocket 연결을 관리하는 딕셔너리
-# Key: room_id, Value: List[WebSocket]
 active_connections: dict[int, list[WebSocket]] = {}
 
 @router.websocket("/ws/chat/{room_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
     room_id: int,
-    token: str = Query(...), # URL 쿼리 파라미터로 JWT 토큰 받기
+    token: str = Query(...),
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. JWT 인증
+    # 1. JWT 인증 및 사용자 정보 조회
     payload = decode_access_token(token)
     if not payload:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid authentication token")
@@ -40,7 +40,8 @@ async def websocket_endpoint(
         return
 
     # 2. 채팅방 유효성 검사
-    room = await crud_rooms.get_room(db, room_id=room_id)
+    # 이 줄을 변경합니다: crud_rooms.get_room 대신 crud_rooms.get_room_by_id 사용
+    room = await crud_rooms.get_room_by_id(db, room_id=room_id) # <-- 여기! get_room에서 get_room_by_id로 변경
     if not room:
         await websocket.close(code=status.WS_1003_UNSUPPORTED_DATA, reason="Chat room not found")
         return
@@ -49,7 +50,6 @@ async def websocket_endpoint(
     print(f"WebSocket accepted for room {room_id} and user {username}")
 
     # 3. Redis pub/sub 구독
-    # Redis 구독은 각 WebSocket 연결별로 이루어져야 합니다.
     pubsub = await redis_manager.subscribe(f"chat_{room_id}")
     if not pubsub:
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason="Failed to connect to Redis")
@@ -68,14 +68,12 @@ async def websocket_endpoint(
                 message_data = json.loads(data)
                 content = message_data.get("message")
                 if content:
-                    # Redis를 통해 메시지 발행
                     message_to_publish = {
                         "username": current_user.username,
                         "message": content
                     }
                     await redis_manager.publish(f"chat_{room_id}", json.dumps(message_to_publish))
 
-                    # DB에 저장하기 위해 큐에 추가
                     await message_queue.add_message({
                         "room_id": room_id,
                         "sender_id": current_user.id,
@@ -95,8 +93,8 @@ async def websocket_endpoint(
                         except RuntimeError as e: # WebSocket 연결이 이미 닫혔을 경우
                             print(f"Failed to send to a client, connection likely closed: {e}")
                             # 연결이 끊어진 경우 active_connections에서 제거하는 로직 필요
-                            if connection in active_connections[room_id]:
-                                active_connections[room_id].remove(connection)
+                            # 이 부분은 좀 더 견고한 처리가 필요할 수 있습니다.
+                            pass
                 await asyncio.sleep(0.01) # CPU 과부하 방지
 
         # 두 개의 비동기 태스크를 동시에 실행

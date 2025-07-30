@@ -24,6 +24,8 @@ app = FastAPI(lifespan=lifespan)
 origins = [
     "http://localhost:5173",  # React 개발 서버 기본 포트
     "http://127.0.0.1:5173",
+    "http://localhost",
+    "http://localhost:3000", # 프론트엔드 URL
 ]
 
 app.add_middleware(

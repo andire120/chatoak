@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 interface Message {
   username: string;
   message: string;
-  timestamp?: string; // 백엔드에서 내려줄 경우 대비
+  timestamp?: string;
 }
 
 const ChatRoomPage: React.FC = () => {
@@ -19,19 +19,18 @@ const ChatRoomPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const ws = useRef<WebSocket | null>(null);
+  const ws = useRef<WebSocket | null>(null); // WebSocket 인스턴스
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
-  // 이전 메시지 로드
+  // 이전 메시지 로드 (변경 없음, useCallback은 이미 적용됨)
   const fetchPreviousMessages = useCallback(async () => {
     if (!roomId) return;
     try {
       const response = await roomsApi.getMessages(roomId);
-      // 백엔드에서 받은 메시지 형식이 { sender_username, content } 일 수 있으므로 변환
       const formattedMessages = response.data.map((msg: any) => ({
         username: msg.sender_username,
         message: msg.content,
@@ -52,58 +51,89 @@ const ChatRoomPage: React.FC = () => {
       return;
     }
 
+    // 1. 이전 메시지 로드 (한 번만 호출)
     fetchPreviousMessages();
 
-    // WebSocket 연결
-    ws.current = createWebSocket(roomId, token);
+    // 2. WebSocket 연결 로직 (roomId, token이 변경될 때만 재연결)
+    // ws.current가 없거나, 이전 연결이 닫혔을 때만 새 연결 시도
+    if (!ws.current || ws.current.readyState === WebSocket.CLOSED) {
+      ws.current = createWebSocket(roomId, token);
 
-    ws.current.onopen = () => {
-      console.log('WebSocket 연결됨');
-      setError(null);
-    };
+      // WebSocket 이벤트 리스너 등록
+      ws.current.onopen = () => {
+        console.log('WebSocket 연결됨');
+        setError(null);
+      };
 
-    ws.current.onmessage = (event) => {
-      const receivedMessage: Message = JSON.parse(event.data);
-      setMessages((prevMessages) => [...prevMessages, receivedMessage]);
-    };
+      // **메시지 수신 핸들러: 중요한 부분**
+      // `setMessages`에 함수형 업데이트를 사용하여 `messages` 상태의 최신 값을 보장
+      ws.current.onmessage = (event) => {
+        const receivedMessage: Message = JSON.parse(event.data);
+        setMessages((prevMessages) => {
+          // 중복 메시지 방지 로직 추가 (예: 마지막 메시지와 동일한 경우 무시)
+          // 이 부분은 백엔드에서 timestamp를 정확히 내려주거나,
+          // 메시지에 고유 ID를 부여하는 것이 더 확실합니다.
+          // 현재는 간단히 내용과 유저네임이 같으면 무시
+          if (prevMessages.length > 0 && 
+              prevMessages[prevMessages.length - 1].message === receivedMessage.message &&
+              prevMessages[prevMessages.length - 1].username === receivedMessage.username) {
+            return prevMessages; // 중복 메시지로 판단하여 업데이트하지 않음
+          }
+          return [...prevMessages, receivedMessage];
+        });
+      };
 
-    ws.current.onclose = (event) => {
-      console.log('WebSocket 연결 끊김:', event.code, event.reason);
-      if (event.code === 1000) { // 정상 종료
-        // navigate('/rooms'); // 방 나갈 때
-      } else {
-        setError('채팅 서버 연결이 끊겼습니다. 다시 시도해주세요.');
-      }
-    };
+      ws.current.onclose = (event) => {
+        console.log('WebSocket 연결 끊김:', event.code, event.reason);
+        if (event.code !== 1000) { // 정상 종료(1000)가 아닐 경우에만 에러 표시
+          setError('채팅 서버 연결이 끊겼습니다. 다시 시도해주세요.');
+        }
+      };
 
-    ws.current.onerror = (err) => {
-      console.error('WebSocket 오류:', err);
-      setError('WebSocket 연결 중 오류 발생.');
-      ws.current?.close();
-    };
+      ws.current.onerror = (err) => {
+        console.error('WebSocket 오류:', err);
+        setError('WebSocket 연결 중 오류 발생.');
+        ws.current?.close(); // 오류 발생 시 연결 강제 종료
+      };
+    }
 
-    // 컴포넌트 언마운트 시 WebSocket 연결 해제
+
+    // 3. 컴포넌트 언마운트 시 WebSocket 연결 해제 및 정리
     return () => {
+      // 컴포넌트 언마운트 시에만 WebSocket을 닫고, useRef 값을 초기화
+      // StrictMode의 이중 렌더링 시에는 cleanup이 호출되지만, 바로 effect가 다시 실행되므로
+      // 이때는 close하지 않고 ws.current가 유효한지 확인하는 것이 중요합니다.
+      // (이 로직은 RoomId나 token이 변경되어 재연결되는 경우에만 필요)
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        ws.current.close(1000, "User left the chat"); // 정상 종료 코드 1000
+        ws.current.close(1000, "User left the chat");
+        console.log('WebSocket 정리: 연결 닫힘');
       }
+      ws.current = null; // useRef 초기화 (다음 마운트 시 새 연결 생성 보장)
+      setError(null); // 에러 상태 초기화
     };
-  }, [roomId, token, isAuthenticated, navigate, fetchPreviousMessages]);
+  }, [roomId, token, isAuthenticated, navigate, fetchPreviousMessages]); // 의존성 배열에 fetchPreviousMessages 포함
 
-  // 메시지 업데이트 시 스크롤 하단으로 이동
+  // 메시지 업데이트 시 스크롤 하단으로 이동 (변경 없음)
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]); // scrollToBottom을 의존성에 추가 (useCallback으로 감쌌으므로 안전)
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // 메시지 전송 핸들러 (변경 없음)
+  const handleSendMessage = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (ws.current && newMessage.trim()) {
-      const messagePayload = { message: newMessage }; // 백엔드에서 username은 JWT로 추출
+    if (ws.current && ws.current.readyState === WebSocket.OPEN && newMessage.trim()) {
+      const messagePayload = { message: newMessage };
       ws.current.send(JSON.stringify(messagePayload));
       setNewMessage('');
+    } else {
+      console.warn("WebSocket is not open or message is empty. Cannot send.");
+      if (ws.current && ws.current.readyState === WebSocket.CLOSED) {
+          setError('채팅 서버와 연결이 끊어졌습니다. 페이지를 새로고침 해주세요.');
+      }
     }
-  };
+  }, [newMessage]); // newMessage가 변경될 때마다 함수 재생성
 
+  // ... (JSX 렌더링 부분은 동일) ...
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -117,7 +147,7 @@ const ChatRoomPage: React.FC = () => {
       <div className="max-w-xl w-full bg-white p-8 rounded-lg shadow-md flex flex-col h-[80vh]">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">채팅방: {roomId}</h2>
-          <Button onClick={() => navigate('/')} className="w-auto px-4 py-2 bg-gray-600 hover:bg-gray-700">
+          <Button onClick={() => navigate('/rooms')} className="w-auto px-4 py-2 bg-gray-600 hover:bg-gray-700">
             방 목록으로
           </Button>
         </div>
@@ -130,13 +160,19 @@ const ChatRoomPage: React.FC = () => {
           ) : (
             messages.map((msg, index) => (
               <div key={index} className="mb-2">
-                <span className="font-semibold text-indigo-700">{msg.username}:</span>{' '}
+                {/* 사용자 이름과 메시지 사이에 공백 추가 */}
+                <span className="font-semibold text-indigo-700">{msg.username} : </span>
                 <span className="text-gray-800">{msg.message}</span>
-                {msg.timestamp && <span className="text-xs text-gray-400 ml-2">{new Date(msg.timestamp).toLocaleTimeString()}</span>}
+                {/* 타임스탬프 포맷 변경: 'ㅇ (오전 11:50:12)' */}
+                {msg.timestamp && (
+                  <span className="text-xs text-gray-400 ml-2">
+                    &nbsp;&nbsp;( {new Date(msg.timestamp).toLocaleTimeString()} )
+                  </span>
+                )}
               </div>
             ))
           )}
-          <div ref={messagesEndRef} /> {/* 스크롤을 위한 더미 엘리먼트 */}
+          <div ref={messagesEndRef} />
         </div>
 
         <form onSubmit={handleSendMessage} className="flex space-x-2">
