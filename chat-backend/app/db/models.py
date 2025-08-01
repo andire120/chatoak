@@ -45,7 +45,7 @@ class ChatRoom(Base):
         cascade="all, delete-orphan" # ChatRoom 삭제 시, 해당 방의 모든 메시지도 함께 삭제
     )
 
-class Message(Base):
+class ChatMessage(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
