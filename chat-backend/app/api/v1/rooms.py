@@ -34,23 +34,3 @@ async def get_room_messages(room_id: int, db: AsyncSession = Depends(get_db), cu
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
     messages = await crud_messages.get_messages_for_room(db, room_id=room_id) # crud_messages도 확인 필요
     return messages
-
-@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_chat_room(
-    room_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    room = await crud_rooms.get_room_by_id(db, room_id=room_id)
-    if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat room not found")
-
-    # TODO: 여기에서 room.created_by와 current_user.id를 비교하여 권한 확인 로직 추가
-    # 예: if room.created_by != current_user.id:
-    #       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to delete this room")
-
-    deleted = await crud_rooms.delete_room(db, room_id=room_id)
-    if not deleted:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete chat room")
-
-    return
