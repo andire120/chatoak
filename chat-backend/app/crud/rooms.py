@@ -27,3 +27,16 @@ async def get_all_rooms(db: AsyncSession):
     result = await db.execute(select(ChatRoom))
     return result.scalars().all()
 
+# --- 채팅방 삭제 함수 (간결화) ---
+async def delete_room(db: AsyncSession, room_id: int):
+    """
+    주어진 room_id에 해당하는 채팅방을 삭제합니다.
+    ChatRoom 모델의 cascade 설정에 따라 해당 방의 모든 메시지도 함께 삭제됩니다.
+    """
+    result = await db.execute(select(ChatRoom).filter(ChatRoom.id == room_id))
+    room = result.scalars().first()
+    if room:
+        await db.delete(room)
+        await db.commit() # 변경사항 커밋
+        return True
+    return False

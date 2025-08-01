@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from app.db.database import init_db
 from app.services.redis_manager import redis_manager
 from app.api.v1 import auth, rooms, websockets
+from app.api.v1 import users as users_router
 
 # 애플리케이션 시작/종료 시 이벤트 처리
 @asynccontextmanager
@@ -40,3 +41,4 @@ app.add_middleware(
 app.include_router(auth.router, prefix="", tags=["Auth"]) # '/register', '/login'
 app.include_router(rooms.router, prefix="", tags=["Rooms"]) # '/rooms', '/rooms/{room_id}/messages'
 app.include_router(websockets.router) # '/ws/chat/{room_id}'
+app.include_router(users_router.router, prefix="/users", tags=["users"]) # users 라우터 추가
