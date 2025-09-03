@@ -15,7 +15,7 @@ const Input: React.FC<InputProps> = ({ label, id, className, ...rest }) => {
       )}
       <input
         id={id}
-        className={`p-[10px] h-[50px] block w-full px-3 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${className}`}
+        className={`h-[35px] p-[10px] block w-full px-3 py-2 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${className}`}
         {...rest}
       />
     </div>

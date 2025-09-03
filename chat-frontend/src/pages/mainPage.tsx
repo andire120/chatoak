@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import './mainPage.css';
+import './MainPage.css';
 
-const mainPage: React.FC = () => {
+const MainPage: React.FC = () => {
 const navigate = useNavigate();
 
 return (
@@ -22,4 +22,4 @@ return (
 );
 };
 
-export default mainPage;
+export default MainPage;

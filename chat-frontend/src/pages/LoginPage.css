@@ -1,7 +1,7 @@
 * {
-   margin: 0;
-   padding: 0;
-   box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 .container {
@@ -44,4 +44,8 @@
     margin-top: 20px;
 }
 
+.text {
+    font-family: "Playwrite AU TAS Guides", cursive;
+    font-weight: bold;
 
+}

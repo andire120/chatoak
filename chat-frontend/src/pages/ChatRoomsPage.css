@@ -1,0 +1,79 @@
+header {
+  position: relative;
+  width: 100%;
+  padding: 20px;
+}
+
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%; /* 버튼 바로 아래에 위치 */
+  width: 12rem; /* 너비 */
+  background-color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+  padding: 0.25rem 0;
+  z-index: 20;
+}
+
+.menu-bt {
+  position: absolute;
+  display: inline-block;
+  width: auto;
+  padding: 6px;
+  right: 20px;
+  top: 20px;
+  z-index: 10;
+  background-color: rgb(73, 0, 181);
+  border-radius: 10px;
+}
+.menu-bt:hover {
+    background-color: rgb(35, 0, 81);
+}
+
+.menu-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #4b5563; 
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-dropdown-item:hover {
+  background-color: #f3f4f6; 
+}
+
+
+.create-room-form-enter {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.create-room-form-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.bt-con {
+  display: flex;
+  gap: 5px;
+}
+
+.ch-name {
+  width: 300px;
+  height: 40px;
+
+  margin-bottom: 10px;
+}
+
+.chat-form {
+  background-color: #3a3a3a;
+  border-radius: 25px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
