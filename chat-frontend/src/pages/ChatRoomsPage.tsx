@@ -114,7 +114,7 @@ const ChatRoomsPage: React.FC = () => {
           )}
         </div>
       </header>
-       
+      
 
         {isCreateFormVisible && (
           <form onSubmit={handleCreateRoom} className="chat-form">
@@ -137,14 +137,14 @@ const ChatRoomsPage: React.FC = () => {
           </form>
         )}
 
-        <ul className="w-[100vw] flex justify-center">
+        <ul className="w-[100vw] p-[20px]">
           {rooms.length === 0 ? (
             <p className="text-gray-600 text-center ">생성된 채팅방이 없습니다.<br />새로운 방을 만들어 보세요!</p>
           ) : (
             rooms.map((room) => (
               <li
                 key={room.id}
-                className="bg-gray-50 p-4 rounded-md shadow-sm hover:bg-gray-100 cursor-pointer transition duration-150 ease-in-out"
+                className="chat-room"
                 onClick={() => handleRoomClick(room.id)}
               >
                 <h3 className="text-lg font-semibold text-gray-800">{room.name}</h3>
